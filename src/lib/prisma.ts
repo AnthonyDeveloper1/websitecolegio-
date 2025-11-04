@@ -8,7 +8,14 @@ import { PrismaClient } from '@prisma/client'
 // If DATABASE_URL is not set (for example during a preview deploy where
 // we don't want to connect to the real DB), export a lightweight mock that
 // returns safe defaults so the site can build and the UI can render.
-const hasDatabase = Boolean(process.env.DATABASE_URL)
+// Also allow a fallback variable `DB_URL` in case Vercel blocks DATABASE_URL
+const dbUrl = process.env.DATABASE_URL || process.env.DB_URL
+const hasDatabase = Boolean(dbUrl)
+
+// If DB_URL was provided but DATABASE_URL wasn't, set it so Prisma reads it normally
+if (!process.env.DATABASE_URL && process.env.DB_URL) {
+  process.env.DATABASE_URL = process.env.DB_URL
+}
 
 if (!hasDatabase) {
   console.warn('[prisma] DATABASE_URL not set — returning mock prisma for build/time without DB')
