@@ -1,0 +1,17 @@
+{
+  "buildCommand": "npx prisma generate && npm run build",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "JWT_SECRET": "@jwt_secret",
+    "S3_REGION": "@s3_region",
+    "S3_ENDPOINT": "@s3_endpoint",
+    "S3_BUCKET": "@s3_bucket",
+    "S3_ACCESS_KEY": "@s3_access_key",
+    "S3_SECRET_KEY": "@s3_secret_key"
+  }
+}

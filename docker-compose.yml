@@ -1,0 +1,76 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: colegio_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-colegio_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-colegio_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-colegio_db}
+    ports:
+      - "5433:5432"  # Puerto 5433 en host → 5432 en contenedor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - colegio_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colegio_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO - S3 Compatible Storage (para desarrollo local)
+  minio:
+    image: minio/minio:latest
+    container_name: colegio_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - colegio_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # PgAdmin - PostgreSQL Web UI (OPCIONAL - actívalo si lo necesitas)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: colegio_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - colegio_network
+    depends_on:
+      - postgres
+    profiles:
+      - tools  # Solo se levanta con: docker-compose --profile tools up
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  colegio_network:
+    driver: bridge

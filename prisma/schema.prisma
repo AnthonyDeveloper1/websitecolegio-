@@ -1,0 +1,247 @@
+// Prisma Schema - Sistema de Gestión Colegio
+// CORREGIDO - Mapeado exacto a las tablas PostgreSQL reales
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== TABLA 1: ROLES ====================
+model Role {
+  id          Int      @id @default(autoincrement()) @map("id_rol")
+  name        String   @unique @map("nombre") @db.VarChar(100)
+  description String?  @map("descripcion") @db.Text
+  createdAt   DateTime @default(now()) @map("fecha_creacion") @db.Timestamp()
+  
+  users       User[]
+  
+  @@map("roles")
+}
+
+// ==================== TABLA 2: USUARIOS ====================
+model User {
+  id              Int       @id @default(autoincrement()) @map("id_usuario")
+  fullName        String    @map("nombre_completo") @db.VarChar(200)
+  username        String    @unique @map("usuario") @db.VarChar(100)
+  email           String    @unique @map("correo") @db.VarChar(200)
+  password        String    @map("clave") @db.VarChar(255)
+  roleId          Int?      @map("id_rol")
+  lastConnection  DateTime? @map("ultima_conexion") @db.Timestamp()
+  isActive        Boolean   @default(true) @map("activo")
+  registeredAt    DateTime  @default(now()) @map("fecha_registro") @db.Timestamp()
+  
+  role            Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  publications    Publication[]
+  galleryImages   GalleryImage[]
+  auditLogs       AuditLog[]
+  
+  @@index([email], map: "idx_usuarios_correo")
+  @@index([username], map: "idx_usuarios_usuario")
+  @@index([roleId], map: "idx_usuarios_rol")
+  @@map("usuarios")
+}
+
+// ==================== TABLA 3: PUBLICACIONES ====================
+model Publication {
+  id              Int       @id @default(autoincrement()) @map("id_publicacion")
+  title           String    @map("titulo") @db.VarChar(255)
+  slug            String    @unique @map("slug") @db.VarChar(255)
+  description     String?   @map("descripcion") @db.Text
+  content         String    @map("contenido") @db.Text
+  mainImage       String?   @map("imagen_principal") @db.VarChar(500)
+  status          String    @default("borrador") @map("estado") @db.VarChar(50)
+  authorId        Int?      @map("id_usuario")
+  categoryId      Int?      @map("id_categoria")
+  createdAt       DateTime  @default(now()) @map("fecha_publicacion") @db.Timestamp()
+  updatedAt       DateTime  @default(now()) @map("fecha_actualizacion") @db.Timestamp()
+  
+  author          User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category        Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags            PublicationTag[]
+  comments        Comment[]
+  visits          Visit[]
+  
+  @@index([slug], map: "idx_publicaciones_slug")
+  @@index([status], map: "idx_publicaciones_estado")
+  @@index([authorId], map: "idx_publicaciones_usuario")
+  @@index([categoryId], map: "idx_publicaciones_categoria")
+  @@map("publicaciones")
+}
+
+// ==================== TABLA 4: ETIQUETAS ====================
+model Tag {
+  id              Int       @id @default(autoincrement()) @map("id_etiqueta")
+  name            String    @unique @map("nombre") @db.VarChar(100)
+  slug            String    @unique @map("slug") @db.VarChar(150)
+  description     String?   @map("descripcion") @db.Text
+  
+  publications    PublicationTag[]
+  
+  @@map("etiquetas")
+}
+
+// ==================== TABLA 5: PUBLICACION_ETIQUETA (N:N) ====================
+model PublicationTag {
+  id              Int       @id @default(autoincrement()) @map("id_publicacion_etiqueta")
+  publicationId   Int       @map("id_publicacion")
+  tagId           Int       @map("id_etiqueta")
+  
+  publication     Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  tag             Tag       @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@unique([publicationId, tagId])
+  @@index([publicationId], map: "idx_pub_etiq_publicacion")
+  @@index([tagId], map: "idx_pub_etiq_etiqueta")
+  @@map("publicacion_etiqueta")
+}
+
+// ==================== TABLA 6: COMENTARIOS ====================
+model Comment {
+  id              Int       @id @default(autoincrement()) @map("id_comentario")
+  publicationId   Int       @map("id_publicacion")
+  name            String?   @map("nombre") @db.VarChar(150)
+  message         String    @map("mensaje") @db.Text
+  isApproved      Boolean   @default(false) @map("aprobado")
+  createdAt       DateTime  @default(now()) @map("fecha_creacion") @db.Timestamp()
+  
+  publication     Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  reactions       Reaction[]
+  
+  @@index([publicationId], map: "idx_comentarios_publicacion")
+  @@index([isApproved], map: "idx_comentarios_aprobado")
+  @@map("comentarios")
+}
+
+// ==================== TABLA 7: REACCIONES ====================
+model Reaction {
+  id              Int       @id @default(autoincrement()) @map("id_reaccion")
+  commentId       Int?      @map("id_comentario")
+  name            String?   @map("nombre") @db.VarChar(150)
+  reactionType    String    @default("like") @map("tipo_reaccion") @db.VarChar(50)
+  createdAt       DateTime  @default(now()) @map("fecha_creacion") @db.Timestamp()
+  
+  comment         Comment?  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@index([commentId], map: "idx_reacciones_comentario")
+  @@map("reacciones")
+}
+
+// ==================== TABLA 8: ASUNTOS_CONTACTO ====================
+model ContactSubject {
+  id              Int       @id @default(autoincrement()) @map("id_asunto")
+  name            String    @unique @map("nombre") @db.VarChar(200)
+  description     String?   @map("descripcion") @db.Text
+  
+  messages        ContactMessage[]
+  
+  @@map("asuntos_contacto")
+}
+
+// ==================== TABLA 9: MENSAJES_CONTACTO ====================
+model ContactMessage {
+  id              Int       @id @default(autoincrement()) @map("id_mensaje")
+  name            String    @map("nombre") @db.VarChar(200)
+  email           String    @map("correo") @db.VarChar(200)
+  subjectId       Int?      @map("id_asunto")
+  message         String    @map("mensaje") @db.Text
+  isReplied       Boolean   @default(false) @map("respondido")
+  sentAt          DateTime  @default(now()) @map("fecha_envio") @db.Timestamp()
+  repliedAt       DateTime? @map("fecha_respuesta") @db.Timestamp()
+  
+  subject         ContactSubject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  
+  @@index([isReplied], map: "idx_mensajes_respondido")
+  @@map("mensajes_contacto")
+}
+
+// ==================== TABLA 10: CORREOS_DESTINO ====================
+model DestinationEmail {
+  id              Int       @id @default(autoincrement()) @map("id_correo_destino")
+  name            String    @map("nombre") @db.VarChar(200)
+  email           String    @unique @map("correo") @db.VarChar(200)
+  isActive        Boolean   @default(true) @map("activo")
+  
+  @@map("correos_destino")
+}
+
+// ==================== TABLA 11: DIRECTIVOS ====================
+model Director {
+  id              Int       @id @default(autoincrement()) @map("id_directivo")
+  fullName        String    @map("nombre_completo") @db.VarChar(200)
+  position        String?   @map("cargo") @db.VarChar(200)
+  photo           String?   @map("foto") @db.VarChar(500)
+  description     String?   @map("descripcion") @db.Text
+  status          String    @default("activo") @map("estado") @db.VarChar(50)
+  registeredAt    DateTime  @default(now()) @map("fecha_registro") @db.Timestamp()
+  
+  @@map("directivos")
+}
+
+// ==================== TABLA 12: HISTORIAL_ACCIONES ====================
+model AuditLog {
+  id              Int       @id @default(autoincrement()) @map("id_accion")
+  userId          Int?      @map("id_usuario")
+  action          String    @map("accion") @db.VarChar(255)
+  affectedTable   String?   @map("tabla_afectada") @db.VarChar(100)
+  affectedRecordId Int?     @map("id_registro")
+  details         String?   @map("detalles") @db.Text
+  performedAt     DateTime  @default(now()) @map("fecha_accion") @db.Timestamp()
+  
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId], map: "idx_historial_usuario")
+  @@index([performedAt], map: "idx_historial_fecha")
+  @@map("historial_acciones")
+}
+
+// ==================== TABLA 13: VISITAS ====================
+model Visit {
+  id              Int       @id @default(autoincrement()) @map("id_visita")
+  publicationId   Int       @map("id_publicacion")
+  ipAddress       String?   @map("ip") @db.VarChar(100)
+  userAgent       String?   @map("user_agent") @db.Text
+  visitedAt       DateTime  @default(now()) @map("fecha_visita") @db.Timestamp()
+  
+  publication     Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  
+  @@index([publicationId], map: "idx_visitas_publicacion")
+  @@index([visitedAt], map: "idx_visitas_fecha")
+  @@map("visitas")
+}
+
+// ==================== TABLA 14: CATEGORIAS ====================
+model Category {
+  id              Int       @id @default(autoincrement()) @map("id_categoria")
+  name            String    @unique @map("nombre") @db.VarChar(100)
+  slug            String    @unique @map("slug") @db.VarChar(150)
+  description     String?   @map("descripcion") @db.Text
+  icon            String?   @map("icono") @db.VarChar(100)
+  color           String?   @map("color") @db.VarChar(50)
+  order           Int       @default(0) @map("orden")
+  createdAt       DateTime  @default(now()) @map("fecha_creacion") @db.Timestamp()
+  
+  publications    Publication[]
+  
+  @@index([slug], map: "idx_categorias_slug")
+  @@map("categorias")
+}
+
+// ==================== TABLA 15: GALERIA ====================
+model GalleryImage {
+  id              Int       @id @default(autoincrement()) @map("id_imagen")
+  title           String    @map("titulo") @db.VarChar(255)
+  description     String?   @map("descripcion") @db.Text
+  imageUrl        String    @map("url_imagen") @db.VarChar(500)
+  type            String    @default("imagen") @map("tipo") @db.VarChar(50)
+  authorId        Int?      @map("id_usuario")
+  uploadedAt      DateTime  @default(now()) @map("fecha_subida") @db.Timestamp()
+  
+  author          User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  
+  @@index([type], map: "idx_galeria_tipo")
+  @@map("galeria")
+}

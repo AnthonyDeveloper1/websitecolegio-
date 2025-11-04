@@ -1,0 +1,10 @@
+# Uploads directory
+# This folder stores uploaded files in development (local only)
+# In production, files are stored in S3/MinIO cloud storage
+
+*.jpg
+*.png
+*.gif
+*.pdf
+*.webp
+!.gitkeep
