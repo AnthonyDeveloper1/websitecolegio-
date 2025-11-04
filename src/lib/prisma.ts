@@ -9,10 +9,33 @@ import { PrismaClient } from '@prisma/client'
 // we don't want to connect to the real DB), use a lightweight mock that
 // returns safe defaults so the site can build and the UI can render.
 // Also allow a fallback variable `DB_URL` in case Vercel blocks DATABASE_URL
-const dbUrl = process.env.DATABASE_URL || process.env.DB_URL
+// Additionally, handle the case where Vercel exposes a secret reference
+// like `@database_url` as the value for DATABASE_URL — treat that as unset
+// unless a literal DB string is provided in `DB_URL`.
+function normalizeDatabaseUrl(): string | undefined {
+  const raw = process.env.DATABASE_URL ?? process.env.DB_URL
+  if (!raw) return undefined
+
+  // If the value looks like a Vercel secret reference (starts with '@'),
+  // don't treat it as a usable URL. Prefer an explicit DB_URL if provided.
+  if (raw.startsWith('@')) {
+    const fallback = process.env.DB_URL
+    if (fallback) {
+      console.warn('[prisma] DATABASE_URL references a secret; using DB_URL fallback')
+      return fallback
+    }
+    console.warn('[prisma] DATABASE_URL appears to reference a secret and no DB_URL fallback is set')
+    return undefined
+  }
+
+  return raw
+}
+
+const dbUrl = normalizeDatabaseUrl()
 const hasDatabase = Boolean(dbUrl)
 
-// If DB_URL was provided but DATABASE_URL wasn't, set it so Prisma reads it normally
+// If we have a literal DB URL provided via DB_URL and DATABASE_URL wasn't set
+// (or pointed to a secret), set DATABASE_URL so Prisma will read it normally.
 if (!process.env.DATABASE_URL && process.env.DB_URL) {
   process.env.DATABASE_URL = process.env.DB_URL
 }
