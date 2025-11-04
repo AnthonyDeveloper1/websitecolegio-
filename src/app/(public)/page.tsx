@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import HeroCarousel from '@/components/HeroCarousel'
+import { prisma } from '@/lib/prisma'
 
 interface Publication {
   id: number
@@ -14,10 +15,6 @@ interface Publication {
 
 async function getRecentPublications(): Promise<Publication[]> {
   try {
-    // Usar import directo de Prisma para mejor performance
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
-    
     const publications = await prisma.publication.findMany({
       where: { status: 'published' },
       take: 6,
@@ -38,8 +35,6 @@ async function getRecentPublications(): Promise<Publication[]> {
         }
       }
     })
-    
-    await prisma.$disconnect()
     
     return publications.map((p: any) => ({
       id: p.id,

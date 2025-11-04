@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     
     // Enviar notificación a cada correo de destino activo
     if (destinationEmails.length > 0) {
-      const emailAddresses = destinationEmails.map(e => e.email)
+  const emailAddresses = destinationEmails.map((e: { email: string }) => e.email)
       
       sendContactNotification({
         name: message.name,
