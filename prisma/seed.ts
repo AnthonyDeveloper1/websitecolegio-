@@ -84,27 +84,27 @@ async function main() {
     prisma.tag.upsert({
       where: { name: 'Noticias' },
       update: {},
-      create: { name: 'Noticias' },
+      create: { name: 'Noticias', slug: 'noticias' },
     }),
     prisma.tag.upsert({
       where: { name: 'Eventos' },
       update: {},
-      create: { name: 'Eventos' },
+      create: { name: 'Eventos', slug: 'eventos' },
     }),
     prisma.tag.upsert({
       where: { name: 'Académico' },
       update: {},
-      create: { name: 'Académico' },
+      create: { name: 'Académico', slug: 'academico' },
     }),
     prisma.tag.upsert({
       where: { name: 'Deportes' },
       update: {},
-      create: { name: 'Deportes' },
+      create: { name: 'Deportes', slug: 'deportes' },
     }),
     prisma.tag.upsert({
       where: { name: 'Cultura' },
       update: {},
-      create: { name: 'Cultura' },
+      create: { name: 'Cultura', slug: 'cultura' },
     }),
   ])
 
@@ -211,6 +211,7 @@ async function main() {
     where: { email: 'info@colegio.edu' },
     update: {},
     create: {
+      name: 'Correo Principal',
       email: 'info@colegio.edu',
       isActive: true,
     },
