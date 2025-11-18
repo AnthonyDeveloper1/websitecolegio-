@@ -34,9 +34,10 @@ export default function ContactPage() {
       const response = await fetch('/api/destination-emails?active=true', { headers })
       
       if (response.status === 401) {
+        console.error('❌ Token inválido al cargar correos de destino')
         // Token inválido - forzar logout
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
         window.location.href = '/login'
         return
       }
@@ -44,6 +45,8 @@ export default function ContactPage() {
       if (response.ok) {
         const data = await response.json()
         setDestinationEmails(Array.isArray(data) ? data : [])
+      } else {
+        console.error('Error al cargar correos:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error al cargar correos:', error)
@@ -53,22 +56,31 @@ export default function ContactPage() {
   const loadMessages = async () => {
     try {
       const headers = getAuthHeaders()
+      console.log('📤 Cargando mensajes con headers:', headers)
       const response = await fetch('/api/contact', { headers })
       
+      console.log('📥 Respuesta de /api/contact:', response.status, response.statusText)
+      
       if (response.status === 401) {
+        console.error('❌ Token inválido o expirado al cargar mensajes')
         // Token inválido - forzar logout
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
         window.location.href = '/login'
         return
       }
       
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Mensajes cargados:', data.length)
         setMessages(Array.isArray(data) ? data : [])
+      } else {
+        console.error('Error al cargar mensajes:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Detalles del error:', errorData)
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error al cargar mensajes:', error)
       setMessages([])
     } finally {
       setLoading(false)
